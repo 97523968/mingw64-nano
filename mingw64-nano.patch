@@ -1,0 +1,62 @@
+diff --git a/src/nano.c b/src/nano.c
+index f4dbfdd1..8e2f58b4 100644
+--- a/src/nano.c
++++ b/src/nano.c
+@@ -42,6 +42,9 @@
+ #include <sys/vt.h>
+ #endif
+ 
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
++
+ #ifdef ENABLE_MULTIBUFFER
+ #define read_them_all  TRUE
+ #else
+@@ -228,6 +231,12 @@ void suggest_ctrlT_ctrlZ(void)
+  * bracketed-paste mode, and restore the original terminal settings. */
+ void restore_terminal(void)
+ {
++	HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
++	DWORD dwMode;
++	GetConsoleMode(hInput, &dwMode);
++	dwMode &= ~ENABLE_VIRTUAL_TERMINAL_INPUT;
++	SetConsoleMode(hInput, dwMode);
++
+ 	curs_set(1);
+ 	endwin();
+ #ifndef NANO_TINY
+@@ -873,7 +882,7 @@ bool scoop_stdin(void)
+ 							"type ^D or ^D^D to finish.\n"));
+ 
+ 	/* Open standard input. */
+-	stream = fopen("/dev/stdin", "rb");
++	stream = fopen("\\\\.\\CON", "rb");
+ 	if (stream == NULL) {
+ 		int errnumber = errno;
+ 
+@@ -1231,6 +1240,12 @@ void enable_flow_control(void)
+  * control characters. */
+ void terminal_init(void)
+ {
++	HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
++	DWORD dwMode;
++	GetConsoleMode(hInput, &dwMode);
++	dwMode |= ENABLE_VIRTUAL_TERMINAL_INPUT;
++	SetConsoleMode(hInput, dwMode);
++
+ 	raw();
+ 	nonl();
+ 	noecho();
+diff --git a/src/utils.c b/src/utils.c
+index f0f18e46..d9ee06a4 100644
+--- a/src/utils.c
++++ b/src/utils.c
+@@ -33,7 +33,7 @@
+ void get_homedir(void)
+ {
+ 	if (homedir == NULL) {
+-		const char *homenv = getenv("HOME");
++		const char *homenv = getenv("USERPROFILE");
+ 
+ #ifdef HAVE_PWD_H
+ 		/* When HOME isn't set, or when we're root, get the home directory
